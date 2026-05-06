@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "description": "Database schema definition for Kanban persistence using SQLite.",
+  "tables": [
+    {
+      "name": "users",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "primaryKey": true, "autoIncrement": true, "nullable": false },
+        { "name": "username", "type": "TEXT", "nullable": false, "unique": true },
+        { "name": "created_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" },
+        { "name": "updated_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" }
+      ],
+      "indexes": [
+        { "name": "idx_users_username", "columns": ["username"], "unique": true }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "name": "boards",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "primaryKey": true, "autoIncrement": true, "nullable": false },
+        { "name": "user_id", "type": "INTEGER", "nullable": false },
+        { "name": "title", "type": "TEXT", "nullable": false },
+        { "name": "created_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" },
+        { "name": "updated_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" }
+      ],
+      "indexes": [
+        { "name": "idx_boards_user_id", "columns": ["user_id"], "unique": false }
+      ],
+      "foreignKeys": [
+        { "column": "user_id", "references": "users(id)", "onDelete": "CASCADE" }
+      ]
+    },
+    {
+      "name": "columns",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "primaryKey": true, "autoIncrement": true, "nullable": false },
+        { "name": "board_id", "type": "INTEGER", "nullable": false },
+        { "name": "title", "type": "TEXT", "nullable": false },
+        { "name": "position", "type": "INTEGER", "nullable": false },
+        { "name": "created_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" },
+        { "name": "updated_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" }
+      ],
+      "indexes": [
+        { "name": "idx_columns_board_id", "columns": ["board_id"], "unique": false },
+        { "name": "idx_columns_board_id_position", "columns": ["board_id", "position"], "unique": true }
+      ],
+      "foreignKeys": [
+        { "column": "board_id", "references": "boards(id)", "onDelete": "CASCADE" }
+      ]
+    },
+    {
+      "name": "cards",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "primaryKey": true, "autoIncrement": true, "nullable": false },
+        { "name": "column_id", "type": "INTEGER", "nullable": false },
+        { "name": "title", "type": "TEXT", "nullable": false },
+        { "name": "details", "type": "TEXT", "nullable": false },
+        { "name": "position", "type": "INTEGER", "nullable": false },
+        { "name": "created_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" },
+        { "name": "updated_at", "type": "TEXT", "nullable": false, "default": "CURRENT_TIMESTAMP" }
+      ],
+      "indexes": [
+        { "name": "idx_cards_column_id", "columns": ["column_id"], "unique": false },
+        { "name": "idx_cards_column_id_position", "columns": ["column_id", "position"], "unique": true }
+      ],
+      "foreignKeys": [
+        { "column": "column_id", "references": "columns(id)", "onDelete": "CASCADE" }
+      ]
+    }
+  ]
+}
