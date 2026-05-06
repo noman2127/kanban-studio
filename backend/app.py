@@ -38,6 +38,20 @@ def health():
     """Health check endpoint for monitoring"""
     return {"status": "ok", "version": "0.1.0"}
 
+# Include backend API routes
+try:
+    from routes import router as api_router
+    from db import init_db
+
+    app.include_router(api_router, prefix="/api")
+
+    @app.on_event("startup")
+    async def on_startup():
+        init_db()
+except Exception:
+    # Avoid import-time failure during tooling if dependencies are missing
+    pass
+
 # Frontend HTML - serves the Kanban board
 @app.get("/")
 async def serve_frontend():

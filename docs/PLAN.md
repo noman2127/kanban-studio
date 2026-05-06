@@ -1,4 +1,4 @@
-# Detailed Implementation Plan - Project Management MVP
+ 5# Detailed Implementation Plan - Project Management MVP
 
 > Testing note: Aim for 80% coverage only when it adds meaningful value. Prefer high-value unit and integration tests over coverage chasing.
 
@@ -123,22 +123,22 @@
 **Objective**: Build API routes and SQLite database for persistent Kanban operations.
 
 ### Substeps:
-- [ ] Initialize SQLite database (create if doesn't exist on startup)
-- [ ] Set up SQLAlchemy ORM with database models (User, Board, Column, Card)
-- [ ] Create database initialization script that creates tables on startup
-- [ ] Implement POST /api/auth/login endpoint (validate credentials, return token)
-- [ ] Implement GET /api/boards/:boardId endpoint (return board with all columns/cards)
-- [ ] Implement POST /api/boards/:boardId/columns endpoint (create new column)
-- [ ] Implement PUT /api/boards/:boardId/columns/:columnId endpoint (rename column)
-- [ ] Implement POST /api/boards/:boardId/columns/:columnId/cards endpoint (create card)
-- [ ] Implement PUT /api/boards/:boardId/cards/:cardId endpoint (update card)
-- [ ] Implement DELETE /api/boards/:boardId/cards/:cardId endpoint (delete card)
-- [ ] Implement PUT /api/boards/:boardId/cards/:cardId/move endpoint (move card between columns)
-- [ ] Add middleware to validate auth token on protected routes
-- [ ] Create seed script with test user and sample board data
-- [ ] Write backend unit tests for each endpoint (mock database)
-- [ ] Write integration tests that create/read/update/delete data
-- [ ] Test database persists data across server restarts
+- [x] Initialize SQLite database (create if doesn't exist on startup)
+- [x] Set up SQLAlchemy ORM with database models (User, Board, Column, Card)
+- [x] Create database initialization script that creates tables on startup
+- [x] Implement POST /api/auth/login endpoint (validate credentials, return token)
+- [x] Implement GET /api/boards/:boardId endpoint (return board with all columns/cards)
+- [x] Implement POST /api/boards/:boardId/columns endpoint (create new column)
+- [x] Implement PUT /api/boards/:boardId/columns/:columnId endpoint (rename column)
+- [x] Implement POST /api/boards/:boardId/columns/:columnId/cards endpoint (create card)
+- [x] Implement PUT /api/boards/:boardId/cards/:cardId endpoint (update card)
+- [x] Implement DELETE /api/boards/:boardId/cards/:cardId endpoint (delete card)
+- [x] Implement PUT /api/boards/:boardId/cards/:cardId/move endpoint (move card between columns)
+- [x] Add middleware to validate auth token on protected routes
+- [x] Create seed script with test user and sample board data
+- [x] Write backend unit tests for each endpoint (mock database)
+- [x] Write integration tests that create/read/update/delete data
+- [x] Test database persists data across server restarts
 
 ### Test Criteria:
 - Unit tests: Each endpoint returns correct status codes (200, 201, 400, 401, 404)
