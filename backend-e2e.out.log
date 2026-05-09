@@ -1,0 +1,18 @@
+INFO:     127.0.0.1:56912 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56913 - "GET /login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56914 - "GET /_next/static/chunks/755daccba7f56113.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56913 - "GET /_next/static/chunks/602cf337c5267d4d.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56915 - "GET /_next/static/chunks/1627bf2f54f2038d.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56916 - "GET /_next/static/chunks/f2f58a7e93290fbb.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56918 - "GET /_next/static/chunks/turbopack-d37baac7d39dc714.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56917 - "GET /_next/static/chunks/6eebe353f3288c46.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56913 - "GET /_next/static/chunks/0374088cc7291871.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56914 - "GET /_next/static/chunks/2f236954d6a65e12.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56918 - "GET /_next/static/chunks/482c1a3abc4f3d80.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56918 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56918 - "GET /index.txt?_rsc=5c339 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56918 - "GET /_next/static/chunks/295d483fd0fe7058.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56916 - "GET /_next/static/chunks/fc41e79b3333ad36.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56916 - "GET /api/boards/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56916 - "POST /api/boards/1/columns/1/cards HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56916 - "PUT /api/boards/1/cards/12/move HTTP/1.1" 500 Internal Server Error

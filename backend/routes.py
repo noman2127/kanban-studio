@@ -81,6 +81,20 @@ def _build_board_response(board: Board) -> BoardRead:
     )
 
 
+def _resequence_cards(db: Session, cards: list[Card]) -> None:
+    """
+    SQLite enforces UNIQUE(column_id, position) row-by-row during updates.
+    We stage positions in a high range first to avoid transient collisions.
+    """
+    for index, item in enumerate(cards, start=1):
+        item.position = 10_000 + index
+    db.flush()
+
+    for index, item in enumerate(cards, start=1):
+        item.position = index
+    db.flush()
+
+
 @router.get("/boards/{board_id}", response_model=BoardRead)
 def read_board(
     board_id: int,
@@ -103,6 +117,11 @@ def create_column(
     board = _get_board(db, board_id, current_user.id)
     if not board:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
+    if len(board.columns) >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This MVP uses a fixed five-column board.",
+        )
 
     max_position = (
         db.query(Column.position)
@@ -205,20 +224,22 @@ def delete_card(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
 
     source_column_id = card.column_id
-    db.delete(card)
-    db.commit()
+    try:
+        db.delete(card)
+        db.flush()
 
-    cards = (
-        db.query(Card)
-        .filter(Card.column_id == source_column_id)
-        .order_by(Card.position)
-        .all()
-    )
-    for index, item in enumerate(cards, start=1):
-        item.position = index
-    db.commit()
-
-    return {"detail": "Card deleted"}
+        cards = (
+            db.query(Card)
+            .filter(Card.column_id == source_column_id)
+            .order_by(Card.position)
+            .all()
+        )
+        _resequence_cards(db, cards)
+        db.commit()
+        return {"detail": "Card deleted"}
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.put("/boards/{board_id}/cards/{card_id}/move")
@@ -249,41 +270,48 @@ def move_card(
     if payload.target_position < 1:
         payload.target_position = 1
 
-    if card.column_id == target_column.id:
-        cards = (
+    try:
+        if card.column_id == target_column.id:
+            cards = (
+                db.query(Card)
+                .filter(Card.column_id == target_column.id)
+                .order_by(Card.position)
+                .all()
+            )
+            cards = [c for c in cards if c.id != card.id]
+            cards.insert(min(payload.target_position - 1, len(cards)), card)
+            _resequence_cards(db, cards)
+            db.commit()
+            return {"detail": "Card moved"}
+
+        source_column_id = card.column_id
+        source_cards = (
+            db.query(Card)
+            .filter(Card.column_id == source_column_id, Card.id != card.id)
+            .order_by(Card.position)
+            .all()
+        )
+        dest_cards = (
             db.query(Card)
             .filter(Card.column_id == target_column.id)
             .order_by(Card.position)
             .all()
         )
-        cards = [c for c in cards if c.id != card.id]
-        cards.insert(min(payload.target_position - 1, len(cards)), card)
-        for position, item in enumerate(cards, start=1):
-            item.position = position
+
+        # Move card out of source before resequencing both sides.
+        card.position = 999_999
+        db.flush()
+        card.column_id = target_column.id
+        db.flush()
+
+        insert_index = min(max(payload.target_position - 1, 0), len(dest_cards))
+        dest_cards.insert(insert_index, card)
+
+        _resequence_cards(db, source_cards)
+        _resequence_cards(db, dest_cards)
+
         db.commit()
         return {"detail": "Card moved"}
-
-    source_cards = (
-        db.query(Card)
-        .filter(Card.column_id == card.column_id, Card.id != card.id)
-        .order_by(Card.position)
-        .all()
-    )
-    for position, item in enumerate(source_cards, start=1):
-        item.position = position
-
-    dest_cards = (
-        db.query(Card)
-        .filter(Card.column_id == target_column.id)
-        .order_by(Card.position)
-        .all()
-    )
-    insert_position = min(payload.target_position, len(dest_cards) + 1)
-    for item in dest_cards:
-        if item.position >= insert_position:
-            item.position += 1
-
-    card.column_id = target_column.id
-    card.position = insert_position
-    db.commit()
-    return {"detail": "Card moved"}
+    except Exception:
+        db.rollback()
+        raise

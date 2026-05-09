@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Removed output: "export" to enable client-side routing and authentication
+  output: "export",
 };
 
 export default nextConfig;

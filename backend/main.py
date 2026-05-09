@@ -27,6 +27,6 @@ if __name__ == "__main__":
         "app:app",
         host=host,
         port=port,
-        reload=True,  # Auto-reload on file changes during development
+        reload=False,  # Disabled to prevent constant restarts from venv changes
         log_level="info",
     )

@@ -1,6 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { loginRequest } from '@/lib/api';
+
+const userStorageKey = 'kanban-user';
+const tokenStorageKey = 'kanban-token';
 
 export interface User {
   username: string;
@@ -32,44 +36,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load user from localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('kanban-user');
-    if (storedUser) {
+    const storedUser = localStorage.getItem(userStorageKey);
+    const storedToken = localStorage.getItem(tokenStorageKey);
+
+    if (storedUser && storedToken) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
       } catch (error) {
         console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('kanban-user');
+        localStorage.removeItem(userStorageKey);
+        localStorage.removeItem(tokenStorageKey);
       }
     }
     setIsLoading(false);
   }, []);
 
-  // Save user to localStorage whenever user changes
   useEffect(() => {
     if (user) {
-      localStorage.setItem('kanban-user', JSON.stringify(user));
+      localStorage.setItem(userStorageKey, JSON.stringify(user));
     } else {
-      localStorage.removeItem('kanban-user');
+      localStorage.removeItem(userStorageKey);
     }
   }, [user]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Dummy authentication - only "user"/"password" works
-    if (username === 'user' && password === 'password') {
+    try {
+      const token = await loginRequest(username, password);
       const newUser: User = {
         username,
         loginTime: Date.now(),
       };
       setUser(newUser);
+      localStorage.setItem(tokenStorageKey, token);
       return true;
+    } catch (error) {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
+    localStorage.removeItem(tokenStorageKey);
     setUser(null);
   };
 

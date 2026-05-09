@@ -1,7 +1,7 @@
 from pathlib import Path
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).parent
 DATABASE_FILE = BASE_DIR / "kanban.db"
@@ -30,11 +30,12 @@ def init_db():
 
     Base.metadata.create_all(bind=engine)
     _seed_database()
+    _normalize_board_structure()
 
 
 def _seed_database():
     from sqlalchemy import select
-    from models import User, Board, Column, Card
+    from models import Board, Card, Column, User
 
     with SessionLocal() as session:
         first_user = session.execute(select(User)).scalars().first()
@@ -98,5 +99,71 @@ def _seed_database():
                         position=position,
                     )
                 )
+
+        session.commit()
+
+
+def _normalize_board_structure():
+    """
+    Keep boards consistent with MVP constraints:
+    - fixed five-column board for the MVP
+    - no duplicate/extra columns from historical test data
+    """
+    from sqlalchemy import select
+    from models import Board, Card, Column
+
+    with SessionLocal() as session:
+        boards = session.execute(select(Board)).scalars().all()
+        for board in boards:
+            columns = (
+                session.query(Column)
+                .filter(Column.board_id == board.id)
+                .order_by(Column.position.asc(), Column.id.asc())
+                .all()
+            )
+            if not columns:
+                continue
+
+            kept_columns = columns[:5]
+            extra_columns = columns[5:]
+
+            if extra_columns:
+                kept_by_title = {}
+                for column in kept_columns:
+                    kept_by_title.setdefault(column.title.strip().lower(), column)
+
+                fallback_column = kept_columns[-1]
+                for extra in extra_columns:
+                    target = kept_by_title.get(extra.title.strip().lower(), fallback_column)
+                    cards = (
+                        session.query(Card)
+                        .filter(Card.column_id == extra.id)
+                        .order_by(Card.position.asc(), Card.id.asc())
+                        .all()
+                    )
+                    if cards:
+                        max_position = (
+                            session.query(Card.position)
+                            .filter(Card.column_id == target.id)
+                            .order_by(Card.position.desc())
+                            .first()
+                        )
+                        position = (max_position[0] if max_position else 0) + 1
+                        for card in cards:
+                            card.column_id = target.id
+                            card.position = position
+                            position += 1
+                    session.delete(extra)
+
+                session.flush()
+
+            final_columns = (
+                session.query(Column)
+                .filter(Column.board_id == board.id)
+                .order_by(Column.position.asc(), Column.id.asc())
+                .all()
+            )
+            for index, column in enumerate(final_columns, start=1):
+                column.position = index
 
         session.commit()

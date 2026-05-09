@@ -10,7 +10,7 @@ type KanbanCardProps = {
 
 export const KanbanCard = ({ card, onDelete }: KanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id });
+    useSortable({ id: card.id, data: { type: "card" } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -20,10 +20,11 @@ export const KanbanCard = ({ card, onDelete }: KanbanCardProps) => {
   return (
     <article
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, touchAction: "none" }}
       className={clsx(
-        "rounded-2xl border border-transparent bg-white px-4 py-4 shadow-[0_12px_24px_rgba(3,33,71,0.08)]",
+        "select-none rounded-2xl border border-transparent bg-white px-4 py-4 shadow-[0_12px_24px_rgba(3,33,71,0.08)]",
         "transition-all duration-150",
+        "cursor-grab active:cursor-grabbing",
         isDragging && "opacity-60 shadow-[0_18px_32px_rgba(3,33,71,0.16)]"
       )}
       {...attributes}

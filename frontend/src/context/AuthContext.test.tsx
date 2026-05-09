@@ -1,5 +1,23 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from "./AuthContext";
+
+const createFetchMock = () => {
+  return vi.fn(async (_input: RequestInfo, init?: RequestInit) => {
+    const body = init?.body ? JSON.parse(String(init.body)) : {};
+    const ok = body.username === 'user' && body.password === 'password';
+    return {
+      ok,
+      status: ok ? 200 : 401,
+      text: async () =>
+        JSON.stringify(
+          ok
+            ? { access_token: 'test-token', token_type: 'bearer' }
+            : { detail: 'Invalid username or password' }
+        ),
+    } as unknown as Response;
+  });
+};
 
 // Test component that uses the auth context
 const TestComponent = () => {
@@ -37,6 +55,11 @@ const TestComponent = () => {
 describe('AuthContext', () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.stubGlobal('fetch', createFetchMock());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('provides initial unauthenticated state', () => {
@@ -167,5 +190,25 @@ describe('AuthContext', () => {
 
     // Check localStorage is cleared
     expect(localStorage.getItem('kanban-user')).toBeNull();
+  });
+
+  it('keeps token when restoring a saved session', async () => {
+    localStorage.setItem(
+      'kanban-user',
+      JSON.stringify({ username: 'user', loginTime: Date.now() })
+    );
+    localStorage.setItem('kanban-token', 'saved-token');
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('username')).toHaveTextContent('user');
+    });
+
+    expect(localStorage.getItem('kanban-token')).toBe('saved-token');
   });
 });
