@@ -1,8 +1,0 @@
-INFO:     127.0.0.1:59261 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "GET /api/boards/1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "POST /api/boards/1/columns/1/cards HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "PUT /api/boards/1/cards/13/move HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "GET /api/boards/1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "DELETE /api/boards/1/cards/13 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59261 - "GET /api/boards/1 HTTP/1.1" 200 OK
