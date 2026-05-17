@@ -12,6 +12,18 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class AITestRequest(BaseModel):
+    prompt: str = "2+2"
+
+
+class AITestResponse(BaseModel):
+    prompt: str
+    response_text: str
+    model: str
+    latency_ms: int
+    attempts: int
+
+
 class CardCreate(BaseModel):
     title: str
     details: str

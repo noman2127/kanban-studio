@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 
 # Reset database file before importing backend modules
 backend_dir = Path(__file__).parent.parent
-db_file = backend_dir / "kanban.db"
+db_file = backend_dir / "kanban.test.db"
+os.environ["KANBAN_DB_PATH"] = str(db_file)
 if db_file.exists():
     db_file.unlink()
 
@@ -14,6 +15,7 @@ sys.path.insert(0, str(backend_dir))
 
 from app import app
 from db import init_db
+from services.ai_service import AIServiceError
 
 # Initialize database before running tests
 init_db()
@@ -51,24 +53,28 @@ def test_get_board_returns_board_data():
     assert payload["columns"][0]["cards"]
 
 
-def test_create_and_update_column():
+def test_column_limit_and_update_column_title():
+    board_response = client.get("/api/boards/1", headers=AUTH_HEADER)
+    assert board_response.status_code == 200
+    board = board_response.json()
+    first_column = board["columns"][0]
+
+    # MVP keeps a fixed five-column board, so creating a sixth column must fail.
     create_response = client.post(
         "/api/boards/1/columns",
         headers=AUTH_HEADER,
-        json={"title": "In Review"},
+        json={"title": "Extra"},
     )
-    assert create_response.status_code == 200
-    column_payload = create_response.json()
-    assert column_payload["title"] == "In Review"
-    column_id = column_payload["id"]
+    assert create_response.status_code == 400
+    assert create_response.json()["detail"] == "This MVP uses a fixed five-column board."
 
     update_response = client.put(
-        f"/api/boards/1/columns/{column_id}",
+        f"/api/boards/1/columns/{first_column['id']}",
         headers=AUTH_HEADER,
-        json={"title": "Review"},
+        json={"title": "Backlog Updated"},
     )
     assert update_response.status_code == 200
-    assert update_response.json()["title"] == "Review"
+    assert update_response.json()["title"] == "Backlog Updated"
 
 
 def test_create_update_move_and_delete_card():
@@ -125,3 +131,36 @@ def test_create_update_move_and_delete_card():
         for column in board_after_delete["columns"]
         for card in column["cards"]
     )
+
+
+def test_ai_test_requires_authorization():
+    response = client.post("/api/ai/test", json={"prompt": "2+2"})
+    assert response.status_code == 401
+
+
+def test_ai_test_returns_response(monkeypatch):
+    class _Result:
+        prompt = "2+2"
+        response_text = "4"
+        model = "openai/gpt-oss-120b:free"
+        latency_ms = 42
+        attempts = 1
+
+    monkeypatch.setattr("routes.run_ai_test_prompt", lambda prompt: _Result())
+
+    response = client.post("/api/ai/test", headers=AUTH_HEADER, json={"prompt": "2+2"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["response_text"] == "4"
+    assert payload["model"] == "openai/gpt-oss-120b:free"
+
+
+def test_ai_test_handles_service_errors(monkeypatch):
+    def _raise(**_: str):
+        raise AIServiceError("OpenRouter request timed out.", status_code=504)
+
+    monkeypatch.setattr("routes.run_ai_test_prompt", _raise)
+
+    response = client.post("/api/ai/test", headers=AUTH_HEADER, json={"prompt": "2+2"})
+    assert response.status_code == 504
+    assert response.json()["detail"] == "OpenRouter request timed out."

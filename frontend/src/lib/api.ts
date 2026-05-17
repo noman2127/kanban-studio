@@ -2,6 +2,7 @@ import type { BoardData } from "@/lib/kanban";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 const tokenStorageKey = "kanban-token";
+const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
 
 const getAuthHeaders = (): HeadersInit => {
   if (typeof window === "undefined") {
@@ -42,6 +43,32 @@ const handleResponse = async (response: Response) => {
   return JSON.parse(content);
 };
 
+const requestWithRetry = async (
+  path: string,
+  init: RequestInit,
+  retries = 0
+) => {
+  let attempts = 0;
+  while (true) {
+    try {
+      const response = await fetch(buildUrl(path), init);
+      if (
+        RETRYABLE_STATUS_CODES.has(response.status) &&
+        attempts < retries
+      ) {
+        attempts += 1;
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (attempts >= retries) {
+        throw error;
+      }
+      attempts += 1;
+    }
+  }
+};
+
 export type ApiCard = {
   id: number;
   title: string;
@@ -80,7 +107,7 @@ export const mapBoardResponse = (board: ApiBoard): BoardData => ({
 });
 
 export const loginRequest = async (username: string, password: string) => {
-  const response = await fetch(buildUrl("/api/auth/login"), {
+  const response = await requestWithRetry("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -96,18 +123,18 @@ export const loginRequest = async (username: string, password: string) => {
 };
 
 export const fetchBoard = async () => {
-  const response = await fetch(buildUrl("/api/boards/1"), {
+  const response = await requestWithRetry("/api/boards/1", {
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-  });
+  }, 2);
 
   return (await handleResponse(response)) as ApiBoard;
 };
 
 export const updateColumn = async (boardId: number, columnId: number, title: string) => {
-  const response = await fetch(buildUrl(`/api/boards/${boardId}/columns/${columnId}`), {
+  const response = await requestWithRetry(`/api/boards/${boardId}/columns/${columnId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -125,7 +152,7 @@ export const createCard = async (
   title: string,
   details: string
 ) => {
-  const response = await fetch(buildUrl(`/api/boards/${boardId}/columns/${columnId}/cards`), {
+  const response = await requestWithRetry(`/api/boards/${boardId}/columns/${columnId}/cards`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -138,7 +165,7 @@ export const createCard = async (
 };
 
 export const deleteCard = async (boardId: number, cardId: number) => {
-  const response = await fetch(buildUrl(`/api/boards/${boardId}/cards/${cardId}`), {
+  const response = await requestWithRetry(`/api/boards/${boardId}/cards/${cardId}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -152,7 +179,7 @@ export const moveCard = async (
   targetColumnId: number,
   targetPosition?: number
 ) => {
-  const response = await fetch(buildUrl(`/api/boards/${boardId}/cards/${cardId}/move`), {
+  const response = await requestWithRetry(`/api/boards/${boardId}/cards/${cardId}/move`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

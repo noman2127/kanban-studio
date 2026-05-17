@@ -7,17 +7,32 @@ node_modules/
 .env.development
 .env.production
 
+# Python virtual environments
+.venv/
 venv/
-*.log
+backend/venv/
+
+# Python cache artifacts
 __pycache__/
-.env
+*.py[cod]
+.pytest_cache/
+
+# runtime artifacts
+*.log
+backend/kanban*.db
+
+# frontend generated output
+frontend/.next/
+frontend/out/
+frontend/test-results/
+frontend/kanban*.db
+
+# generic build output
+dist/
+build/
 
 # logs
 npm-debug.log*
-
-# build output
-dist/
-build/
 
 # OS files
 .DS_Store

@@ -34,23 +34,48 @@ export const KanbanBoard = () => {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const { user, logout } = useAuth();
 
+  const showApiError = (message: string) => {
+    setError(message);
+    setToast(message);
+  };
+
   useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       try {
         setIsLoading(true);
         const boardData = await fetchBoard();
-        setBoard(mapBoardResponse(boardData));
+        if (!cancelled) {
+          setBoard(mapBoardResponse(boardData));
+        }
       } catch (loadError) {
         console.error("Failed to load board", loadError);
-        setError("Unable to load board from backend.");
+        if (!cancelled) {
+          showApiError("Unable to load board from backend.");
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const sensors = useSensors(
@@ -272,13 +297,15 @@ export const KanbanBoard = () => {
     } catch (moveError) {
       console.error('Unable to save card move', moveError);
       setBoard((prev) => ({ ...prev, columns: previousColumns }));
-      setError('Unable to move card right now.');
+      showApiError('Unable to move card right now.');
     } finally {
       dragMetaRef.current = {};
     }
   };
 
   const handleRenameColumn = async (columnId: string, title: string) => {
+    const previousTitle =
+      board.columns.find((column) => column.id === columnId)?.title ?? title;
     setBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((column) =>
@@ -290,7 +317,13 @@ export const KanbanBoard = () => {
       await updateColumn(1, parseInt(columnId, 10), title);
     } catch (renameError) {
       console.error('Unable to save column title', renameError);
-      setError('Unable to save column title.');
+      setBoard((prev) => ({
+        ...prev,
+        columns: prev.columns.map((column) =>
+          column.id === columnId ? { ...column, title: previousTitle } : column
+        ),
+      }));
+      showApiError('Unable to save column title.');
     }
   };
 
@@ -299,6 +332,26 @@ export const KanbanBoard = () => {
     title: string,
     details: string
   ) => {
+    const temporaryCardId = `temp-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 7)}`;
+    setBoard((prev) => ({
+      ...prev,
+      cards: {
+        ...prev.cards,
+        [temporaryCardId]: {
+          id: temporaryCardId,
+          title,
+          details: details || 'No details yet.',
+        },
+      },
+      columns: prev.columns.map((column) =>
+        column.id === columnId
+          ? { ...column, cardIds: [...column.cardIds, temporaryCardId] }
+          : column
+      ),
+    }));
+
     try {
       const createdCard = await apiCreateCard(
         1,
@@ -311,7 +364,9 @@ export const KanbanBoard = () => {
       setBoard((prev) => ({
         ...prev,
         cards: {
-          ...prev.cards,
+          ...Object.fromEntries(
+            Object.entries(prev.cards).filter(([id]) => id !== temporaryCardId)
+          ),
           [cardId]: {
             id: cardId,
             title: createdCard.title,
@@ -320,20 +375,40 @@ export const KanbanBoard = () => {
         },
         columns: prev.columns.map((column) =>
           column.id === columnId
-            ? { ...column, cardIds: [...column.cardIds, cardId] }
+            ? {
+                ...column,
+                cardIds: column.cardIds.map((id) =>
+                  id === temporaryCardId ? cardId : id
+                ),
+              }
             : column
         ),
       }));
     } catch (addError) {
       console.error('Unable to add card', addError);
-      setError('Unable to add card.');
+      setBoard((prev) => ({
+        ...prev,
+        cards: Object.fromEntries(
+          Object.entries(prev.cards).filter(([id]) => id !== temporaryCardId)
+        ),
+        columns: prev.columns.map((column) =>
+          column.id === columnId
+            ? {
+                ...column,
+                cardIds: column.cardIds.filter((id) => id !== temporaryCardId),
+              }
+            : column
+        ),
+      }));
+      showApiError('Unable to add card.');
     }
   };
 
   const handleDeleteCard = async (columnId: string, cardId: string) => {
-    try {
-      await apiDeleteCard(1, parseInt(cardId, 10));
-      setBoard((prev) => ({
+    let previousBoardState: BoardData | null = null;
+    setBoard((prev) => {
+      previousBoardState = prev;
+      return {
         ...prev,
         cards: Object.fromEntries(
           Object.entries(prev.cards).filter(([id]) => id !== cardId)
@@ -343,10 +418,17 @@ export const KanbanBoard = () => {
             ? { ...column, cardIds: column.cardIds.filter((id) => id !== cardId) }
             : column
         ),
-      }));
+      };
+    });
+
+    try {
+      await apiDeleteCard(1, parseInt(cardId, 10));
     } catch (deleteError) {
       console.error('Unable to delete card', deleteError);
-      setError('Unable to delete card.');
+      if (previousBoardState) {
+        setBoard(previousBoardState);
+      }
+      showApiError('Unable to delete card.');
     }
   };
 
@@ -358,6 +440,11 @@ export const KanbanBoard = () => {
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
       <main className="relative mx-auto flex min-h-screen max-w-[1500px] flex-col gap-10 px-6 pb-16 pt-12">
+        {toast && (
+          <div className="fixed right-6 top-6 z-50 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 shadow-lg">
+            {toast}
+          </div>
+        )}
         <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>

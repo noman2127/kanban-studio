@@ -162,20 +162,20 @@
 **Objective**: Connect frontend to backend API so Kanban state persists.
 
 ### Substeps:
-- [ ] Replace hardcoded board data with API calls (useEffect in KanbanBoard)
-- [ ] Implement GET /boards/:boardId to fetch initial board state
-- [ ] Create API client utilities for all CRUD operations
-- [ ] Update card creation to call POST /boards/:boardId/cards
-- [ ] Update card deletion to call DELETE /boards/:boardId/cards/:cardId
-- [ ] Update card move to call PUT /boards/:boardId/cards/:cardId/move
-- [ ] Update column rename to call PUT /boards/:boardId/columns/:columnId
-- [ ] Add loading states (show spinner while API calls complete)
-- [ ] Add error handling (show toast on API errors, retry logic)
-- [ ] Add optimistic UI updates (update UI before API response)
-- [ ] Test all CRUD operations persist correctly
-- [ ] Test error recovery (network failure, invalid data)
-- [ ] Test concurrent updates don't cause race conditions
-- [ ] E2E test: Complete workflow from login → modify board → refresh page → changes persist
+- [x] Replace hardcoded board data with API calls (useEffect in KanbanBoard)
+- [x] Implement GET /boards/:boardId to fetch initial board state
+- [x] Create API client utilities for all CRUD operations
+- [x] Update card creation to call POST /boards/:boardId/cards
+- [x] Update card deletion to call DELETE /boards/:boardId/cards/:cardId
+- [x] Update card move to call PUT /boards/:boardId/cards/:cardId/move
+- [x] Update column rename to call PUT /boards/:boardId/columns/:columnId
+- [x] Add loading states (show spinner while API calls complete)
+- [x] Add error handling (show toast on API errors, retry logic)
+- [x] Add optimistic UI updates (update UI before API response)
+- [x] Test all CRUD operations persist correctly
+- [x] Test error recovery (network failure, invalid data)
+- [x] Test concurrent updates don't cause race conditions
+- [x] E2E test: Complete workflow from login -> modify board -> refresh page -> changes persist
 
 ### Test Criteria:
 - Unit tests: API client methods format requests correctly
@@ -309,3 +309,4 @@
 - ✅ UI is beautiful and matches design system
 - ✅ All tests pass
 - ✅ MVP is complete and functional
+

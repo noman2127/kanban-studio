@@ -1,11 +1,16 @@
+import os
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).parent
-DATABASE_FILE = BASE_DIR / "kanban.db"
-DATABASE_URL = f"sqlite:///{DATABASE_FILE}"
+DEFAULT_DATABASE_FILE = BASE_DIR / "kanban.db"
+DATABASE_FILE = Path(os.getenv("KANBAN_DB_PATH", str(DEFAULT_DATABASE_FILE)))
+if not DATABASE_FILE.is_absolute():
+    DATABASE_FILE = (Path.cwd() / DATABASE_FILE).resolve()
+DATABASE_FILE.parent.mkdir(parents=True, exist_ok=True)
+DATABASE_URL = f"sqlite:///{DATABASE_FILE.resolve().as_posix()}"
 
 engine = create_engine(
     DATABASE_URL,

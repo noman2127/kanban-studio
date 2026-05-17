@@ -80,8 +80,6 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
-const getFirstColumn = () => screen.getAllByTestId(/column-/i)[0];
-
 describe("KanbanBoard", () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', createFetchMock());
@@ -95,6 +93,7 @@ describe("KanbanBoard", () => {
     render(<KanbanBoard />);
     const columns = await screen.findAllByTestId(/column-/i);
     expect(columns).toHaveLength(5);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("displays welcome message and logout button", async () => {
@@ -137,5 +136,21 @@ describe("KanbanBoard", () => {
     await userEvent.click(deleteButton);
 
     expect(within(column).queryByText("New card")).not.toBeInTheDocument();
+  });
+
+  it("shows backend error message when board load fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => JSON.stringify({ detail: "backend down" }),
+      })) as unknown as typeof fetch
+    );
+
+    render(<KanbanBoard />);
+
+    const errors = await screen.findAllByText("Unable to load board from backend.");
+    expect(errors.length).toBeGreaterThan(0);
   });
 });

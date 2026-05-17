@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 from auth import create_access_token, get_current_user
 from db import get_db
 from models import Board, Column, Card
+from services.ai_service import AIServiceError, run_ai_test_prompt
 from schemas import (
+    AITestRequest,
+    AITestResponse,
     BoardRead,
     CardCreate,
     CardUpdate,
@@ -30,6 +33,24 @@ def login(payload: LoginRequest):
 
     token = create_access_token()
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.post("/ai/test", response_model=AITestResponse)
+def ai_test(
+    payload: AITestRequest,
+    current_user=Depends(get_current_user),
+):
+    try:
+        result = run_ai_test_prompt(prompt=payload.prompt)
+        return {
+            "prompt": result.prompt,
+            "response_text": result.response_text,
+            "model": result.model,
+            "latency_ms": result.latency_ms,
+            "attempts": result.attempts,
+        }
+    except AIServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 def _get_board(db: Session, board_id: int, user_id: int) -> Board | None:
